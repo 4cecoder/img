@@ -3,7 +3,7 @@ A command-line program to view multiple image files.
 
 ## Getting Started
 ### Prerequisites
-- GTK+ 3
+- [GTK+ 3](https://www.perplexity.ai/?s=c&uuid=d5b74b48-d5b4-4d1c-8bb5-aa3eded723b8)
 
 ### Installation
 1. Clone the repository:
