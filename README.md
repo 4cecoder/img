@@ -11,8 +11,8 @@ A command-line program to view multiple image files.
 `git clone https://github.com/4cecoder/img.git`
 
 2. Build the program:
-`
-sh build.sh`
+
+`sh build.sh`
 
 3. Install the program:
 
