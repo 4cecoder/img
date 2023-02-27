@@ -16,7 +16,7 @@ sh build.sh`
 
 3. Install the program:
 
-`sudo make install`
+`sudo make clean install`
 
 or
 
