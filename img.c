@@ -22,11 +22,11 @@ GdkPixbuf* load_image(const char* filename) {
   return pixbuf;
 }
 
-void load_images(char** argv) {
+void load_images(const char* dir_path) {
   DIR* dir;
   struct dirent* ent;
 
-  if ((dir = opendir(".")) != NULL) {
+  if ((dir = opendir(dir_path)) != NULL) {
     while ((ent = readdir(dir)) != NULL) {
       if (ent->d_type == DT_REG) {
         if (total_images >= MAX_IMAGES) {
@@ -34,8 +34,10 @@ void load_images(char** argv) {
         }
         const char* ext = strrchr(ent->d_name, '.');
         if (ext != NULL && (strcmp(ext, ".jpg") == 0 || strcmp(ext, ".jpeg") == 0 || strcmp(ext, ".png") == 0)) {
-          pixbuf[total_images] = load_image(ent->d_name);
+          char* path = g_build_filename(dir_path, ent->d_name, NULL);
+          pixbuf[total_images] = load_image(path);
           total_images++;
+          g_free(path);
         }
       }
     }
@@ -45,6 +47,7 @@ void load_images(char** argv) {
     exit(EXIT_FAILURE);
   }
 }
+
 
 void update_image() {
   gtk_image_set_from_pixbuf(GTK_IMAGE(image), pixbuf[current_image]);
@@ -62,22 +65,32 @@ void on_key_press(GtkWidget* widget, GdkEventKey* event, gpointer user_data) {
   } else if (event->keyval == GDK_KEY_k) {
     int prev_image = (current_image - 1 + total_images) % total_images;
     switch_to_image(prev_image);
+  } else if (event->keyval == GDK_KEY_q) {
+    gtk_main_quit();
   }
 }
 
 int main(int argc, char** argv) {
-  if (argc > 1) {
-    g_print("Usage: %s\n", argv[0]);
+  if (argc > 2) {
+    g_print("Usage: %s [directory]\n", argv[0]);
     return EXIT_FAILURE;
   }
 
-  load_images(argv);
+  char* dir_path = argc == 2 ? argv[1] : ".";
+  load_images(dir_path);
 
   gtk_init(&argc, &argv);
 
+  GdkDisplay *display = gdk_display_get_default();
+  GdkMonitor *monitor = gdk_display_get_primary_monitor(display);
+  GdkRectangle workarea;
+  gdk_monitor_get_workarea(monitor, &workarea);
+  int max_width = workarea.width - 20;
+  int max_height = workarea.height - 20;
+
   GtkWidget* window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
   gtk_window_set_title(GTK_WINDOW(window), "Image Viewer");
-  gtk_window_set_default_size(GTK_WINDOW(window), 300, 300);
+  gtk_window_set_default_size(GTK_WINDOW(window), max_width, max_height);
   gtk_container_set_border_width(GTK_CONTAINER(window), 10);
   gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
   g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
