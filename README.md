@@ -1,2 +1,2 @@
 # img
-look at an image file
+a command to look at an image file
