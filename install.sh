@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# Run build script
-./build.sh
-
 # Check if binary exists
 if [ ! -f img ]; then
   echo "img binary not found. Please build it first with build.sh"
