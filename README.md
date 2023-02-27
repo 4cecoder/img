@@ -1,8 +1,12 @@
 # img
-a command to look at an image file
-
-`img <image_filename>`
+a command to look at multiple image files
+### Clone the project
+`git clone https://github.com/4cecoder/img`
+### build the program
+`sh build.sh`
+### start the program
+`./img`
 
 ### Controls:
 
-   There are no controls *YET* in this program, only a static image display.
+ `J` and `K` keys to cycle through the images being displayed.
