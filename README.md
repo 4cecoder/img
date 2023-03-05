@@ -11,7 +11,9 @@ A command-line program to view multiple image files.
 3. Install the program: `sudo make clean install` or `sudo ./install.sh`
 
 ## Usage
-To start the program, run: `img .` to cycle through images in the current directory or specify a full directory path: `img ~/Pictures/`
+To start the program, run: `img .` to cycle through images in the current directory 
+
+Or specify a full directory path: `img ~/Pictures/`
 
 ## Controls
 - `J` and `K` keys to cycle through images
