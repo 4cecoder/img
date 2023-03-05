@@ -5,6 +5,8 @@ A command-line program to view multiple image files.
 ### Prerequisites
 - [GTK+ 3](https://www.perplexity.ai/?s=c&uuid=d5b74b48-d5b4-4d1c-8bb5-aa3eded723b8)
 
+<br>
+
 ### Installation
 1. Clone the repository:
 
@@ -23,7 +25,7 @@ or
 
 `sudo ./install.sh`
 
-
+<br>
 
 ### Usage
 Open a terminal window and run the following command to start the program:
