@@ -42,6 +42,8 @@ Use the `J` and `K` keys to cycle through the images being displayed.
 
 Press `Q` to quit the program.
 
+<br>
+
 ## Contributing
 Contributions are welcome! Please feel free to submit a pull request.
 
