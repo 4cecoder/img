@@ -28,15 +28,15 @@ or
 ### Usage
 Open a terminal window and run the following command to start the program:
 
-`img .`
- 
-<br>
+`img .` 
 
 this would activate img in order to cycle through images in the current directory
 
-<br> 
-
 you can specify full directory paths that may have images such as: `img ~/Pictures/`
+
+<br>
+
+### Controls
 
 Use the `J` and `K` keys to cycle through the images being displayed.
 
