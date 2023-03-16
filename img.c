@@ -61,17 +61,19 @@ void load_images(const char* dir_path, int max_width, int max_height) {
 }
 
 void update_image() {
-    if (total_images > 0) {
-        GtkWidget *image_widget = gtk_image_new_from_pixbuf(pixbuf[current_image]);
-        gtk_stack_add_named(GTK_STACK(image_stack), image_widget, "current_image");
-        gtk_widget_show(image_widget);
-        gtk_stack_set_visible_child(GTK_STACK(image_stack), image_widget);
-    }
+  if (total_images > 0) {
+    GtkWidget *image_widget = gtk_image_new_from_pixbuf(pixbuf[current_image]);
+    gchar *child_name = g_strdup_printf("image_%d", current_image);
+    gtk_stack_add_named(GTK_STACK(image_stack), image_widget, child_name);
+    g_free(child_name);
+    gtk_widget_show(image_widget);
+    gtk_stack_set_visible_child(GTK_STACK(image_stack), image_widget);
+  }
 }
 
 void switch_to_image(int index) {
   current_image = index;
-    
+
   GdkPixbuf *current_pixbuf = pixbuf[current_image];
   int width = gdk_pixbuf_get_width(current_pixbuf);
   int height = gdk_pixbuf_get_height(current_pixbuf);
@@ -82,7 +84,7 @@ void switch_to_image(int index) {
     gtk_window_set_position(GTK_WINDOW(toplevel), GTK_WIN_POS_CENTER);
   }
 
-   update_image();
+  update_image();
 }
 
 void on_key_press(GtkWidget* widget, GdkEventKey* event, gpointer user_data) {
@@ -107,35 +109,34 @@ int main(int argc, char** argv) {
   GdkMonitor *monitor = gdk_display_get_primary_monitor(display);
   GdkRectangle workarea;
   gdk_monitor_get_workarea(monitor, &workarea);
-  int max_width = workarea.width - 20;
-  int max_height = workarea.height - 20;
+  int max_width = workarea.width; // Changed from workarea.width - 20;
+  int max_height = workarea.height; // Changed from workarea.height - 20;
 
   load_images(dir_path, max_width, max_height);
 
     GtkWidget* window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    gtk_window_set_title(GTK_WINDOW(window), "Image Viewer");
-    gtk_window_set_default_size(GTK_WINDOW(window), max_width, max_height);
-    gtk_container_set_border_width(GTK_CONTAINER(window), 0);
-    gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
-    g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
+  gtk_window_set_title(GTK_WINDOW(window), "Image Viewer");
+  gtk_window_set_decorated(GTK_WINDOW(window), FALSE);
+  gtk_window_set_default_size(GTK_WINDOW(window), -1, -1);
+  gtk_container_set_border_width(GTK_CONTAINER(window), 0);
+  gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
+  g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
 
+  if (total_images > 0) {
+    image_stack = gtk_stack_new();
+    gtk_stack_set_transition_type(GTK_STACK(image_stack), GTK_STACK_TRANSITION_TYPE_CROSSFADE);
+    gtk_stack_set_transition_duration(GTK_STACK(image_stack), 500);
 
-    if (total_images > 0) {
-        image_stack = gtk_stack_new();
-        gtk_stack_set_transition_type(GTK_STACK(image_stack), GTK_STACK_TRANSITION_TYPE_CROSSFADE);
-        gtk_stack_set_transition_duration(GTK_STACK(image_stack), 500);
+    GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+    // Changed from gtk_container_add(GTK_CONTAINER(vbox), image_stack);
+    gtk_container_add(GTK_CONTAINER(vbox), image_stack);
+    gtk_container_add(GTK_CONTAINER(window), vbox);
 
-        GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-        gtk_box_set_center_widget(GTK_BOX(vbox), image_stack);
-
-        gtk_container_add(GTK_CONTAINER(window), vbox);
-
-        update_image(); // Calls 'update_image()' to set the initial image.
-
-        g_signal_connect(window, "key-press-event", G_CALLBACK(on_key_press), NULL);
-        gtk_widget_show_all(window);
-        gtk_main();
-    } else {
+    switch_to_image(0);
+    g_signal_connect(window, "key-press-event", G_CALLBACK(on_key_press), NULL);
+    gtk_widget_show_all(window);
+    gtk_main();
+  } else {
         GtkWidget *message_dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_INFO, GTK_BUTTONS_OK,
                                                            "No images found in directory: %s", dir_path);
         gtk_dialog_run(GTK_DIALOG(message_dialog));
