@@ -9,9 +9,10 @@
 int current_image = 0;
 int total_images = 0;
 GdkPixbuf* pixbuf[MAX_IMAGES];
-GtkWidget* image;
+GtkWidget* image_stack;
 
-GdkPixbuf* load_image(const char* filename, int max_width, int max_height) {
+
+GdkPixbuf* load_image(const char* filename, int max_width, int max_height) {    
     GError* error = NULL;
     GdkPixbuf* pixbuf = gdk_pixbuf_new_from_file(filename, &error);
     if (error != NULL) {
@@ -35,7 +36,6 @@ GdkPixbuf* load_image(const char* filename, int max_width, int max_height) {
 
     return pixbuf;
 }
-
 
 void load_images(const char* dir_path, int max_width, int max_height) {
   DIR* dir;
@@ -62,13 +62,16 @@ void load_images(const char* dir_path, int max_width, int max_height) {
 
 void update_image() {
     if (total_images > 0) {
-        gtk_image_set_from_pixbuf(GTK_IMAGE(image), pixbuf[current_image]);
+        GtkWidget *image_widget = gtk_image_new_from_pixbuf(pixbuf[current_image]);
+        gtk_stack_add_named(GTK_STACK(image_stack), image_widget, "current_image");
+        gtk_widget_show(image_widget);
+        gtk_stack_set_visible_child(GTK_STACK(image_stack), image_widget);
     }
 }
 
 void switch_to_image(int index) {
   current_image = index;
-
+    
   GdkPixbuf *current_pixbuf = pixbuf[current_image];
   int width = gdk_pixbuf_get_width(current_pixbuf);
   int height = gdk_pixbuf_get_height(current_pixbuf);
@@ -79,7 +82,7 @@ void switch_to_image(int index) {
     gtk_window_set_position(GTK_WINDOW(toplevel), GTK_WIN_POS_CENTER);
   }
 
-  update_image();
+   update_image();
 }
 
 void on_key_press(GtkWidget* widget, GdkEventKey* event, gpointer user_data) {
@@ -116,17 +119,22 @@ int main(int argc, char** argv) {
     gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
     g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
 
+
     if (total_images > 0) {
-      image = gtk_image_new_from_pixbuf(pixbuf[current_image]);
+        image_stack = gtk_stack_new();
+        gtk_stack_set_transition_type(GTK_STACK(image_stack), GTK_STACK_TRANSITION_TYPE_CROSSFADE);
+        gtk_stack_set_transition_duration(GTK_STACK(image_stack), 500);
 
-      GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-      gtk_box_set_center_widget(GTK_BOX(vbox), image);
+        GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+        gtk_box_set_center_widget(GTK_BOX(vbox), image_stack);
 
-      gtk_container_add(GTK_CONTAINER(window), vbox);
+        gtk_container_add(GTK_CONTAINER(window), vbox);
 
-      g_signal_connect(window, "key-press-event", G_CALLBACK(on_key_press), NULL);
-      gtk_widget_show_all(window);
-      gtk_main();
+        update_image(); // Calls 'update_image()' to set the initial image.
+
+        g_signal_connect(window, "key-press-event", G_CALLBACK(on_key_press), NULL);
+        gtk_widget_show_all(window);
+        gtk_main();
     } else {
         GtkWidget *message_dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_INFO, GTK_BUTTONS_OK,
                                                            "No images found in directory: %s", dir_path);
