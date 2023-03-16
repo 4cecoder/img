@@ -67,8 +67,19 @@ void update_image() {
 }
 
 void switch_to_image(int index) {
-    current_image = index;
-    update_image();
+  current_image = index;
+
+  GdkPixbuf *current_pixbuf = pixbuf[current_image];
+  int width = gdk_pixbuf_get_width(current_pixbuf);
+  int height = gdk_pixbuf_get_height(current_pixbuf);
+
+  GtkWidget *toplevel = gtk_widget_get_toplevel(image);
+  if (gtk_widget_is_toplevel(toplevel)) {
+    gtk_window_resize(GTK_WINDOW(toplevel), width, height);
+    gtk_window_set_position(GTK_WINDOW(toplevel), GTK_WIN_POS_CENTER);
+  }
+
+  update_image();
 }
 
 void on_key_press(GtkWidget* widget, GdkEventKey* event, gpointer user_data) {
@@ -98,20 +109,24 @@ int main(int argc, char** argv) {
 
   load_images(dir_path, max_width, max_height);
 
-  
     GtkWidget* window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_window_set_title(GTK_WINDOW(window), "Image Viewer");
     gtk_window_set_default_size(GTK_WINDOW(window), max_width, max_height);
-    gtk_container_set_border_width(GTK_CONTAINER(window), 10);
+    gtk_container_set_border_width(GTK_CONTAINER(window), 0);
     gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
     g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
 
     if (total_images > 0) {
-        image = gtk_image_new_from_pixbuf(pixbuf[current_image]);
-        gtk_container_add(GTK_CONTAINER(window), image);
-        g_signal_connect(window, "key-press-event", G_CALLBACK(on_key_press), NULL);
-        gtk_widget_show_all(window);
-        gtk_main();
+      image = gtk_image_new_from_pixbuf(pixbuf[current_image]);
+
+      GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+      gtk_box_set_center_widget(GTK_BOX(vbox), image);
+
+      gtk_container_add(GTK_CONTAINER(window), vbox);
+
+      g_signal_connect(window, "key-press-event", G_CALLBACK(on_key_press), NULL);
+      gtk_widget_show_all(window);
+      gtk_main();
     } else {
         GtkWidget *message_dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_INFO, GTK_BUTTONS_OK,
                                                            "No images found in directory: %s", dir_path);
