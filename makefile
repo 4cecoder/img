@@ -1,18 +1,17 @@
-CC = gcc
-CFLAGS = `pkg-config --cflags gtk+-3.0`
-LIBS = `pkg-config --libs gtk+-3.0`
+GOCMD = go
+GOBUILD = $(GOCMD) build
+GOCLEAN = $(GOCMD) clean
 TARGET = img
-SRC = img.c
 PREFIX = /usr/local
 BINDIR = $(PREFIX)/bin
 
 all: $(TARGET)
 
-$(TARGET): $(SRC)
-	$(CC) $(CFLAGS) $(SRC) -o $(TARGET) $(LIBS)
+$(TARGET): main.go
+	$(GOBUILD) -o $(TARGET) main.go
 
 clean:
-	rm -f $(TARGET)
+	$(GOCLEAN)
 
 install: all
 	mkdir -p $(BINDIR)
