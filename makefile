@@ -14,7 +14,6 @@ $(TARGET): $(SRC)
 clean:
 	rm -f $(TARGET)
 
-install: $(TARGET)
+install: all
 	mkdir -p $(BINDIR)
 	install -m 755 $(TARGET) $(BINDIR)
-
