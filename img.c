@@ -76,7 +76,7 @@ void switch_to_image(int index) {
   int width = gdk_pixbuf_get_width(current_pixbuf);
   int height = gdk_pixbuf_get_height(current_pixbuf);
 
-  GtkWidget *toplevel = gtk_widget_get_toplevel(image);
+  GtkWidget *toplevel = gtk_widget_get_toplevel(image_stack);
   if (gtk_widget_is_toplevel(toplevel)) {
     gtk_window_resize(GTK_WINDOW(toplevel), width, height);
     gtk_window_set_position(GTK_WINDOW(toplevel), GTK_WIN_POS_CENTER);
