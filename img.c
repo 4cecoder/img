@@ -37,27 +37,27 @@ GdkPixbuf* load_image(const char* filename, int max_width, int max_height) {
 }
 
 
-void load_images(const char* dir_path) {
-    DIR* dir;
-    struct dirent* ent;
+void load_images(const char* dir_path, int max_width, int max_height) {
+  DIR* dir;
+  struct dirent* ent;
 
-    dir = opendir(dir_path);
-    if (dir != NULL) {
-        while ((ent = readdir(dir)) != NULL) {
-            if (ent->d_type == DT_REG && total_images < MAX_IMAGES) {
-                const char* ext = strrchr(ent->d_name, '.');
-                  if (ext != NULL && (g_strcmp0(ext, ".jpg") == 0 || g_strcmp0(ext, ".jpeg") == 0 || g_strcmp0(ext, ".png") == 0)) {
-                    char* path = g_build_filename(dir_path, ent->d_name, NULL);
-                    GdkPixbuf* new_pixbuf = load_image(path, max_width, max_height);
-                    if (new_pixbuf != NULL) {
-                        pixbuf[total_images++] = new_pixbuf;
-                    }
-                    g_free(path);
-                }
-            }
+  dir = opendir(dir_path);
+  if (dir != NULL) {
+    while ((ent = readdir(dir)) != NULL) {
+      if (ent->d_type == DT_REG && total_images < MAX_IMAGES) {
+        const char* ext = strrchr(ent->d_name, '.');
+        if (ext != NULL && (g_strcmp0(ext, ".jpg") == 0 || g_strcmp0(ext, ".jpeg") == 0 || g_strcmp0(ext, ".png") == 0)) {
+          char* path = g_build_filename(dir_path, ent->d_name, NULL);
+          GdkPixbuf* new_pixbuf = load_image(path, max_width, max_height);
+          if (new_pixbuf != NULL) {
+            pixbuf[total_images++] = new_pixbuf;
+          }
+          g_free(path);
         }
-        closedir(dir);
+      }
     }
+    closedir(dir);
+  }
 }
 
 void update_image() {
@@ -85,18 +85,20 @@ void on_key_press(GtkWidget* widget, GdkEventKey* event, gpointer user_data) {
 
 
 int main(int argc, char** argv) {
-    char* dir_path = argc == 2 ? argv[1] : ".";
-    load_images(dir_path);
+  char* dir_path = argc == 2 ? argv[1] : ".";
 
-    gtk_init(&argc, &argv);
+  gtk_init(&argc, &argv);
 
-    GdkDisplay *display = gdk_display_get_default();
-    GdkMonitor *monitor = gdk_display_get_primary_monitor(display);
-    GdkRectangle workarea;
-    gdk_monitor_get_workarea(monitor, &workarea);
-    int max_width = workarea.width - 20;
-    int max_height = workarea.height - 20;
+  GdkDisplay *display = gdk_display_get_default();
+  GdkMonitor *monitor = gdk_display_get_primary_monitor(display);
+  GdkRectangle workarea;
+  gdk_monitor_get_workarea(monitor, &workarea);
+  int max_width = workarea.width - 20;
+  int max_height = workarea.height - 20;
 
+  load_images(dir_path, max_width, max_height);
+
+  
     GtkWidget* window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_window_set_title(GTK_WINDOW(window), "Image Viewer");
     gtk_window_set_default_size(GTK_WINDOW(window), max_width, max_height);
