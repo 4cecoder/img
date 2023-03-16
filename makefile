@@ -1,11 +1,13 @@
 CC = gcc
-CFLAGS = -Wall -Wextra `pkg-config --cflags gtk+-3.0`
-LDLIBS = `pkg-config --libs gtk+-3.0`
+CFLAGS = `pkg-config --cflags gtk+-3.0`
+LIBS = `pkg-config --libs gtk+-3.0`
+TARGET = img_viewer
+SRC = img.c
 
-all: img
+all: $(TARGET)
 
-img: img.c
-	$(CC) $(CFLAGS) -o $@ $< $(LDLIBS)
+$(TARGET): $(SRC)
+	$(CC) $(CFLAGS) $(SRC) -o $(TARGET) $(LIBS)
 
 clean:
-	rm -f img
+	rm -f $(TARGET)
