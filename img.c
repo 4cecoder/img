@@ -11,15 +11,31 @@ int total_images = 0;
 GdkPixbuf* pixbuf[MAX_IMAGES];
 GtkWidget* image;
 
-GdkPixbuf* load_image(const char* filename) {
+GdkPixbuf* load_image(const char* filename, int max_width, int max_height) {
     GError* error = NULL;
     GdkPixbuf* pixbuf = gdk_pixbuf_new_from_file(filename, &error);
     if (error != NULL) {
         g_error_free(error);
         return NULL;
     }
+
+    int width = gdk_pixbuf_get_width(pixbuf);
+    int height = gdk_pixbuf_get_height(pixbuf);
+    double scale_x = (double)max_width / width;
+    double scale_y = (double)max_height / height;
+    double scale = MIN(scale_x, scale_y);
+
+    if (scale < 1.0) {
+        int new_width = (int)(width * scale);
+        int new_height = (int)(height * scale);
+        GdkPixbuf* scaled_pixbuf = gdk_pixbuf_scale_simple(pixbuf, new_width, new_height, GDK_INTERP_BILINEAR);
+        g_object_unref(pixbuf);
+        return scaled_pixbuf;
+    }
+
     return pixbuf;
 }
+
 
 void load_images(const char* dir_path) {
     DIR* dir;
@@ -30,9 +46,9 @@ void load_images(const char* dir_path) {
         while ((ent = readdir(dir)) != NULL) {
             if (ent->d_type == DT_REG && total_images < MAX_IMAGES) {
                 const char* ext = strrchr(ent->d_name, '.');
-                if (ext != NULL && (g_strcmp0(ext, ".jpg") == 0 || g_strcmp0(ext, ".jpeg") == 0 || g_strcmp0(ext, ".png") == 0)) {
+                  if (ext != NULL && (g_strcmp0(ext, ".jpg") == 0 || g_strcmp0(ext, ".jpeg") == 0 || g_strcmp0(ext, ".png") == 0)) {
                     char* path = g_build_filename(dir_path, ent->d_name, NULL);
-                    GdkPixbuf* new_pixbuf = load_image(path);
+                    GdkPixbuf* new_pixbuf = load_image(path, max_width, max_height);
                     if (new_pixbuf != NULL) {
                         pixbuf[total_images++] = new_pixbuf;
                     }
