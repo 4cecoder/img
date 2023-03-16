@@ -25,11 +25,12 @@ void load_images(const char* dir_path) {
     DIR* dir;
     struct dirent* ent;
 
-    if ((dir = opendir(dir_path)) != NULL) {
+    dir = opendir(dir_path);
+    if (dir != NULL) {
         while ((ent = readdir(dir)) != NULL) {
             if (ent->d_type == DT_REG && total_images < MAX_IMAGES) {
                 const char* ext = strrchr(ent->d_name, '.');
-                if (ext != NULL && (strcmp(ext, ".jpg") == 0 || strcmp(ext, ".jpeg") == 0 || strcmp(ext, ".png") == 0)) {
+                if (ext != NULL && (g_strcmp0(ext, ".jpg") == 0 || g_strcmp0(ext, ".jpeg") == 0 || g_strcmp0(ext, ".png") == 0)) {
                     char* path = g_build_filename(dir_path, ent->d_name, NULL);
                     GdkPixbuf* new_pixbuf = load_image(path);
                     if (new_pixbuf != NULL) {
