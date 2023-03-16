@@ -1,151 +1,113 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <dirent.h>
 #include <gtk/gtk.h>
+#include <gdk-pixbuf/gdk-pixbuf.h>
+#include <dirent.h>
+#include <string.h>
 
 #define MAX_IMAGES 100
 
-int current_image = 0;
-int total_images = 0;
-GdkPixbuf* pixbuf[MAX_IMAGES];
-GtkWidget* image_stack;
+static int current_image = 0;
+static int image_count = 0;
+static gchar *image_paths[MAX_IMAGES];
 
+static void load_images(const gchar *directory) {
+  DIR *dir;
+  struct dirent *entry;
 
-GdkPixbuf* load_image(const char* filename, int max_width, int max_height) {    
-    GError* error = NULL;
-    GdkPixbuf* pixbuf = gdk_pixbuf_new_from_file(filename, &error);
-    if (error != NULL) {
-        g_error_free(error);
-        return NULL;
+  if ((dir = opendir(directory)) == NULL) {
+    g_print("Error: Unable to open directory.\n");
+    return;
+  }
+
+  while ((entry = readdir(dir)) != NULL && image_count < MAX_IMAGES) {
+    gchar *file_path = g_strdup_printf("%s/%s", directory, entry->d_name);
+    if (gdk_pixbuf_new_from_file(file_path, NULL) != NULL) {
+      image_paths[image_count++] = file_path;
+    } else {
+      g_free(file_path);
     }
+  }
+  closedir(dir);
+}
 
+static void change_image(GtkImage *image_widget) {
+  GdkPixbuf *pixbuf = gdk_pixbuf_new_from_file(image_paths[current_image], NULL);
+  if (pixbuf) {
     int width = gdk_pixbuf_get_width(pixbuf);
     int height = gdk_pixbuf_get_height(pixbuf);
-    double scale_x = (double)max_width / width;
-    double scale_y = (double)max_height / height;
-    double scale = MIN(scale_x, scale_y);
+    GdkDisplay *display = gdk_display_get_default();
+    GdkMonitor *monitor = gdk_display_get_primary_monitor(display);
+    GdkRectangle monitor_geometry;
+    gdk_monitor_get_geometry(monitor, &monitor_geometry);
+    int monitor_width = monitor_geometry.width;
+    int monitor_height = monitor_geometry.height;
 
-    if (scale < 1.0) {
-        int new_width = (int)(width * scale);
-        int new_height = (int)(height * scale);
-        GdkPixbuf* scaled_pixbuf = gdk_pixbuf_scale_simple(pixbuf, new_width, new_height, GDK_INTERP_BILINEAR);
-        g_object_unref(pixbuf);
-        return scaled_pixbuf;
+    if (width > monitor_width) {
+      double ratio = (double)monitor_width / (double)width;
+      width = monitor_width;
+      height = (int)(height * ratio);
+    }
+    if (height > monitor_height) {
+      double ratio = (double)monitor_height / (double)height;
+      height = monitor_height;
+      width = (int)(width * ratio);
     }
 
-    return pixbuf;
-}
-
-void load_images(const char* dir_path, int max_width, int max_height) {
-  DIR* dir;
-  struct dirent* ent;
-
-  dir = opendir(dir_path);
-  if (dir != NULL) {
-    while ((ent = readdir(dir)) != NULL) {
-      if (ent->d_type == DT_REG && total_images < MAX_IMAGES) {
-        const char* ext = strrchr(ent->d_name, '.');
-        if (ext != NULL && (g_strcmp0(ext, ".jpg") == 0 || g_strcmp0(ext, ".jpeg") == 0 || g_strcmp0(ext, ".png") == 0)) {
-          char* path = g_build_filename(dir_path, ent->d_name, NULL);
-          GdkPixbuf* new_pixbuf = load_image(path, max_width, max_height);
-          if (new_pixbuf != NULL) {
-            pixbuf[total_images++] = new_pixbuf;
-          }
-          g_free(path);
-        }
-      }
-    }
-    closedir(dir);
+    GdkPixbuf *scaled_pixbuf = gdk_pixbuf_scale_simple(pixbuf, width, height, GDK_INTERP_BILINEAR);
+    gtk_window_resize(GTK_WINDOW(gtk_widget_get_toplevel(GTK_WIDGET(image_widget))), width, height);
+    gtk_image_set_from_pixbuf(image_widget, scaled_pixbuf);
+    g_object_unref(scaled_pixbuf);
+    g_object_unref(pixbuf);
   }
 }
 
-void update_image() {
-  if (total_images > 0) {
-    GtkWidget *image_widget = gtk_image_new_from_pixbuf(pixbuf[current_image]);
-    gchar *child_name = g_strdup_printf("image_%d", current_image);
-    gtk_stack_add_named(GTK_STACK(image_stack), image_widget, child_name);
-    g_free(child_name);
-    gtk_widget_show(image_widget);
-    gtk_stack_set_visible_child(GTK_STACK(image_stack), image_widget);
+static gboolean on_key_press(GtkWidget *widget, GdkEventKey *event, gpointer user_data) {
+  GtkImage *image_widget = GTK_IMAGE(user_data);
+
+  if (event->keyval == GDK_KEY_q || event->keyval == GDK_KEY_Q) {
+    gtk_main_quit();
+  } else if (event->keyval == GDK_KEY_j || event->keyval == GDK_KEY_J) {
+    current_image = (current_image + 1) % image_count;
+    change_image(image_widget);
+  } else if (event->keyval == GDK_KEY_k || event->keyval == GDK_KEY_K) {
+    current_image = (current_image - 1 + image_count) % image_count;
+    change_image(image_widget);
   }
+  return FALSE;
 }
-
-void switch_to_image(int index) {
-  current_image = index;
-
-  GdkPixbuf *current_pixbuf = pixbuf[current_image];
-  int width = gdk_pixbuf_get_width(current_pixbuf);
-  int height = gdk_pixbuf_get_height(current_pixbuf);
-
-  GtkWidget *toplevel = gtk_widget_get_toplevel(image_stack);
-  if (gtk_widget_is_toplevel(toplevel)) {
-    gtk_window_resize(GTK_WINDOW(toplevel), width, height);
-    gtk_window_set_position(GTK_WINDOW(toplevel), GTK_WIN_POS_CENTER);
-  }
-
-  update_image();
-}
-
-void on_key_press(GtkWidget* widget, GdkEventKey* event, gpointer user_data) {
-    if (event->keyval == GDK_KEY_j) {
-        int next_image = (current_image + 1) % total_images;
-        switch_to_image(next_image);
-    } else if (event->keyval == GDK_KEY_k) {
-        int prev_image = (current_image - 1 + total_images) % total_images;
-        switch_to_image(prev_image);
-    } else if (event->keyval == GDK_KEY_q) {
-        gtk_main_quit();
-    }
-}
-
-
-int main(int argc, char** argv) {
-  char* dir_path = argc == 2 ? argv[1] : ".";
+int main(int argc, char *argv[]) {
+  GtkWidget *window;
+  GtkWidget *image;
 
   gtk_init(&argc, &argv);
 
-  GdkDisplay *display = gdk_display_get_default();
-  GdkMonitor *monitor = gdk_display_get_primary_monitor(display);
-  GdkRectangle workarea;
-  gdk_monitor_get_workarea(monitor, &workarea);
-  int max_width = workarea.width; // Changed from workarea.width - 20;
-  int max_height = workarea.height; // Changed from workarea.height - 20;
-
-  load_images(dir_path, max_width, max_height);
-
-    GtkWidget* window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-  gtk_window_set_title(GTK_WINDOW(window), "Image Viewer");
-  gtk_window_set_decorated(GTK_WINDOW(window), FALSE);
-  gtk_window_set_default_size(GTK_WINDOW(window), -1, -1);
-  gtk_container_set_border_width(GTK_CONTAINER(window), 0);
-  gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
-  g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
-
-  if (total_images > 0) {
-    image_stack = gtk_stack_new();
-    gtk_stack_set_transition_type(GTK_STACK(image_stack), GTK_STACK_TRANSITION_TYPE_CROSSFADE);
-    gtk_stack_set_transition_duration(GTK_STACK(image_stack), 500);
-
-    GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-    // Changed from gtk_container_add(GTK_CONTAINER(vbox), image_stack);
-    gtk_container_add(GTK_CONTAINER(vbox), image_stack);
-    gtk_container_add(GTK_CONTAINER(window), vbox);
-
-    switch_to_image(0);
-    g_signal_connect(window, "key-press-event", G_CALLBACK(on_key_press), NULL);
-    gtk_widget_show_all(window);
-    gtk_main();
+  if (argc < 2) {
+    load_images(".");
   } else {
-        GtkWidget *message_dialog = gtk_message_dialog_new(NULL, GTK_DIALOG_MODAL, GTK_MESSAGE_INFO, GTK_BUTTONS_OK,
-                                                           "No images found in directory: %s", dir_path);
-        gtk_dialog_run(GTK_DIALOG(message_dialog));
-        gtk_widget_destroy(message_dialog);
-    }
+    load_images(argv[1]);
+  }
 
-    for (int i = 0; i < total_images; i++) {
-        g_object_unref(pixbuf[i]);
-    }
+  if (image_count == 0) {
+    g_print("No images found in the specified directory.\n");
+    return 1;
+  }
 
-    return EXIT_SUCCESS;
+  window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+  gtk_window_set_decorated(GTK_WINDOW(window), FALSE); // Remove window decorations
+  gtk_window_set_title(GTK_WINDOW(window), "Image Viewer");
+  g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
+  g_signal_connect(window, "key_press_event", G_CALLBACK(on_key_press), NULL);
+
+  image = gtk_image_new();
+  change_image(GTK_IMAGE(image));
+  g_signal_connect(window, "key_press_event", G_CALLBACK(on_key_press), image);
+
+  gtk_container_add(GTK_CONTAINER(window), image);
+  gtk_widget_show_all(window);
+  gtk_main();
+
+  for (int i = 0; i < image_count; i++) {
+    g_free(image_paths[i]);
+  }
+
+  return 0;
 }
