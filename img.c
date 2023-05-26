@@ -2,6 +2,7 @@
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include <dirent.h>
 #include <string.h>
+#include <glib.h>
 
 #define MAX_IMAGES 100
 
@@ -19,12 +20,13 @@ static void load_images(const gchar *directory) {
   }
 
   while ((entry = readdir(dir)) != NULL && image_count < MAX_IMAGES) {
-    gchar *file_path = g_strdup_printf("%s/%s", directory, entry->d_name);
-    if (gdk_pixbuf_new_from_file(file_path, NULL) != NULL) {
-      image_paths[image_count++] = file_path;
-    } else {
-      g_free(file_path);
-    }
+  gchar *canonical_path = g_canonicalize_filename(file_path, directory);
+if (gdk_pixbuf_new_from_file(canonical_path, NULL) != NULL) {
+  image_paths[image_count++] = canonical_path;
+} else {
+  g_free(canonical_path);
+}
+
   }
   closedir(dir);
 }
