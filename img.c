@@ -4,11 +4,9 @@
 #include <string.h>
 #include <glib.h>
 
-#define MAX_IMAGES 100
-
 static int current_image = 0;
 static int image_count = 0;
-static gchar *image_paths[MAX_IMAGES];
+static GPtrArray *image_paths = NULL;
 
 static void load_images(const gchar *directory) {
   DIR *dir;
@@ -19,20 +17,29 @@ static void load_images(const gchar *directory) {
     return;
   }
 
-  while ((entry = readdir(dir)) != NULL && image_count < MAX_IMAGES) {
-  gchar *canonical_path = g_canonicalize_filename(file_path, directory);
-if (gdk_pixbuf_new_from_file(canonical_path, NULL) != NULL) {
-  image_paths[image_count++] = canonical_path;
-} else {
-  g_free(canonical_path);
-}
+  image_paths = g_ptr_array_new_with_free_func(g_free);
 
+  while ((entry = readdir(dir)) != NULL) {
+    gchar *canonical_path = g_canonicalize_filename(entry->d_name, directory);
+    if (gdk_pixbuf_new_from_file(canonical_path, NULL) != NULL) {
+      g_ptr_array_add(image_paths, canonical_path);
+      image_count++;
+    } else {
+      g_free(canonical_path);
+    }
   }
   closedir(dir);
 }
 
-static void change_image(GtkImage *image_widget) {
-  GdkPixbuf *pixbuf = gdk_pixbuf_new_from_file(image_paths[current_image], NULL);
+static void change_image(GtkImage *image_widget) {  
+  GError *error = NULL;
+  GdkPixbuf *pixbuf = gdk_pixbuf_new_from_file(image_paths->pdata[current_image], &error);
+  if (error) {
+    g_print("Error: %s\n", error->message);
+    g_error_free(error);
+    return;
+  }
+  
   if (pixbuf) {
     int width = gdk_pixbuf_get_width(pixbuf);
     int height = gdk_pixbuf_get_height(pixbuf);
@@ -77,6 +84,8 @@ static gboolean on_key_press(GtkWidget *widget, GdkEventKey *event, gpointer use
   return FALSE;
 }
 int main(int argc, char *argv[]) {
+  
+  
   GtkWidget *window;
   GtkWidget *image;
 
@@ -94,8 +103,7 @@ int main(int argc, char *argv[]) {
   }
 
   window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-  gtk_window_set_decorated(GTK_WINDOW(window), FALSE); // Remove window decorations
-  gtk_window_set_title(GTK_WINDOW(window), "Image Viewer");
+  gtk_window_set_decorated(GTK_WINDOW(window), FALSE);
   g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
   g_signal_connect(window, "key_press_event", G_CALLBACK(on_key_press), NULL);
 
@@ -110,6 +118,7 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < image_count; i++) {
     g_free(image_paths[i]);
   }
+  g_ptr_array_free(image_paths, TRUE);
 
   return 0;
 }
