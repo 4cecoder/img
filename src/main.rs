@@ -419,7 +419,30 @@ impl eframe::App for ImageViewer {
 
                 // Calculate aspect ratio and fit to available space
                 let available_size = ui.available_size();
-                let img_aspect = size.0 as f32 / size.1 as f32;
+                
+                // Get the actual display dimensions after rotation
+                let (display_width, display_height) = if let Some(path) = self.images.get(self.current_index) {
+                    let cache = self.image_cache.clone();
+                    let path_clone = path.clone();
+                    
+                    {
+                        let mut cache = cache.lock().unwrap();
+                        if let Some(cached) = cache.get(&path_clone) {
+                            // Apply rotation to get effective dimensions
+                            let (w, h) = cached.display_image.dimensions();
+                            match cached.rotation % 360 {
+                                90 | 270 => (h, w), // Swap dimensions for 90° and 270° rotations
+                                _ => (w, h), // Keep original dimensions for 0° and 180°
+                            }
+                        } else {
+                            (size.0, size.1) // Fallback to original dimensions
+                        }
+                    }
+                } else {
+                    (size.0, size.1) // Fallback to original dimensions
+                };
+                
+                let img_aspect = display_width as f32 / display_height as f32;
                 let available_aspect = available_size.x / available_size.y;
 
                 let display_size = if img_aspect > available_aspect {
@@ -628,5 +651,52 @@ mod tests {
 
         // This should not panic
         viewer.rotate_current_image();
+    }
+
+    #[test]
+    fn test_aspect_ratio_calculation_after_rotation() {
+        // Test that aspect ratio calculation correctly handles rotated dimensions
+        let (orig_w, orig_h) = (1920, 1080); // Landscape image
+        
+        // Test 0° rotation (no change)
+        let (display_w, display_h) = match 0 % 360 {
+            90 | 270 => (orig_h, orig_w),
+            _ => (orig_w, orig_h),
+        };
+        let aspect_0 = display_w as f32 / display_h as f32;
+        assert!((aspect_0 - 1920.0/1080.0).abs() < 0.001);
+        
+        // Test 90° rotation (landscape becomes portrait)
+        let (display_w, display_h) = match 90 % 360 {
+            90 | 270 => (orig_h, orig_w),
+            _ => (orig_w, orig_h),
+        };
+        let aspect_90 = display_w as f32 / display_h as f32;
+        assert!((aspect_90 - 1080.0/1920.0).abs() < 0.001);
+        
+        // Test 180° rotation (no change to aspect ratio)
+        let (display_w, display_h) = match 180 % 360 {
+            90 | 270 => (orig_h, orig_w),
+            _ => (orig_w, orig_h),
+        };
+        let aspect_180 = display_w as f32 / display_h as f32;
+        assert!((aspect_180 - 1920.0/1080.0).abs() < 0.001);
+        
+        // Test 270° rotation (landscape becomes portrait)
+        let (display_w, display_h) = match 270 % 360 {
+            90 | 270 => (orig_h, orig_w),
+            _ => (orig_w, orig_h),
+        };
+        let aspect_270 = display_w as f32 / display_h as f32;
+        assert!((aspect_270 - 1080.0/1920.0).abs() < 0.001);
+        
+        // Verify that 90° and 270° rotations have the same aspect ratio
+        assert!((aspect_90 - aspect_270).abs() < 0.001);
+        
+        // Verify that 0° and 180° rotations have the same aspect ratio
+        assert!((aspect_0 - aspect_180).abs() < 0.001);
+        
+        // Verify that 90° rotation is different from 0° rotation
+        assert!((aspect_0 - aspect_90).abs() > 0.001);
     }
 }
