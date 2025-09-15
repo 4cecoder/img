@@ -568,3 +568,65 @@ fn main() -> Result<(), eframe::Error> {
             )
         })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use image::DynamicImage;
+
+    #[test]
+    fn test_rotation_initialization() {
+        let img = DynamicImage::new_rgb8(100, 100);
+        let cached = CachedImage {
+            display_image: img,
+            texture: None,
+            rotation: 0,
+        };
+        
+        assert_eq!(cached.rotation, 0);
+    }
+
+    #[test]
+    fn test_rotation_math() {
+        // Test rotation calculation logic
+        let mut rotation = 0;
+        
+        // Test single rotation
+        rotation = (rotation + 90) % 360;
+        assert_eq!(rotation, 90);
+        
+        // Test multiple rotations
+        rotation = (rotation + 90) % 360;
+        assert_eq!(rotation, 180);
+        
+        rotation = (rotation + 90) % 360;
+        assert_eq!(rotation, 270);
+        
+        // Test wrap-around
+        rotation = (rotation + 90) % 360;
+        assert_eq!(rotation, 0);
+        
+        // Test additional rotations
+        rotation = (rotation + 90) % 360;
+        assert_eq!(rotation, 90);
+    }
+
+    #[test]
+    fn test_rotation_with_no_image() {
+        let mut viewer = ImageViewer {
+            images: Vec::new(),
+            current_index: 0,
+            current_image: None,
+            loading_image: None,
+            image_cache: Arc::new(Mutex::new(LruCache::new(std::num::NonZeroUsize::new(10).unwrap()))),
+            preload_handles: HashMap::new(),
+            delete_pending: false,
+            delete_timestamp: None,
+            show_delete_confirm: false,
+            image_to_delete: None,
+        };
+
+        // This should not panic
+        viewer.rotate_current_image();
+    }
+}
