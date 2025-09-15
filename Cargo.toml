@@ -1,0 +1,12 @@
+[package]
+name = "img"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+image = "0.24"
+eframe = "0.25"
+walkdir = "2"
+tokio = { version = "1.0", features = ["rt-multi-thread", "sync"] }
+lru = "0.12"
+futures = "0.3"
